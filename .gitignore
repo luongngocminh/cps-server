@@ -11,3 +11,12 @@ yarn-debug.log*
 yarn-error.log*
 .env
 build
+
+# Try to ignore volumes/ but still keeping mqtt configs
+volumes/*
+!volumes/**/
+volumes/data
+volumes/etc/*
+!volumes/etc/**/
+volumes/etc/mqtt/log
+

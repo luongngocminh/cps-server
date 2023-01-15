@@ -3,10 +3,10 @@ import { Db } from 'mongodb';
 import config from '@/config';
 
 export default async (): Promise<Db> => {
-  const connection = await mongoose.connect(config.databaseURL, {
+  const connection = await mongoose.connect(config.mongoURL, {
     useNewUrlParser: true,
     useCreateIndex: true,
     useUnifiedTopology: true,
   });
-  return connection.connection.db;
+  return connection.connection.db as any;
 };

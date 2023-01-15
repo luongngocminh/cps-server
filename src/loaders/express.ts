@@ -27,6 +27,7 @@ export default ({ app }: { app: express.Application }) => {
   // Some sauce that always add since 2014
   // "Lets you use HTTP verbs such as PUT or DELETE in places where the client doesn't support it."
   // Maybe not needed anymore ?
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   app.use(require('method-override')());
 
   // Transforms the raw string of req.body into json
@@ -35,9 +36,11 @@ export default ({ app }: { app: express.Application }) => {
   app.use(config.api.prefix, routes());
 
   // API Documentation
-  app.use(OpticMiddleware({
+  app.use(
+    OpticMiddleware({
       enabled: process.env.NODE_ENV !== 'production',
-  }));
+    }),
+  );
 
   /// catch 404 and forward to error handler
   app.use((req, res, next) => {
@@ -52,10 +55,7 @@ export default ({ app }: { app: express.Application }) => {
      * Handle 401 thrown by express-jwt library
      */
     if (err.name === 'UnauthorizedError') {
-      return res
-        .status(err.status)
-        .send({ message: err.message })
-        .end();
+      return res.status(err.status).send({ message: err.message }).end();
     }
     return next(err);
   });

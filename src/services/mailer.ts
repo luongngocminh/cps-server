@@ -3,10 +3,7 @@ import { IUser } from '@/interfaces/IUser';
 
 @Service()
 export default class MailerService {
-  constructor(
-    @Inject('emailClient') private emailClient,
-    @Inject('emailDomain') private emailDomain,
-  ) { }
+  constructor(@Inject('emailClient') private emailClient, @Inject('emailDomain') private emailDomain) {}
 
   public async SendWelcomeEmail(email) {
     /**
@@ -22,8 +19,8 @@ export default class MailerService {
     try {
       this.emailClient.messages.create(this.emailDomain, data);
       return { delivered: 1, status: 'ok' };
-    } catch(e) {
-      return  { delivered: 0, status: 'error' };
+    } catch (e) {
+      return { delivered: 0, status: 'error' };
     }
   }
   public StartEmailSequence(sequence: string, user: Partial<IUser>) {

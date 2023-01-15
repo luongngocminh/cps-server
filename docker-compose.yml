@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  influx: 
+    container_name: influx
+    hostname: influx
+    image: influxdb:2.0
+    restart: always
+    volumes:
+      - ./volumes/data/influx:/var/lib/influxdb2
+    networks:
+      - app
+    ports:
+      - 8086:8086
+
+  mongo:
+    container_name: mongo
+    hostname: mongo
+    restart: always
+    image: mongo:6
+    volumes:
+      - ./volumes/data/mongo:/data/db
+    networks:
+      - app
+    ports:
+      - 27017:27017
+      
+  mosquitto:
+    container_name: mqtt
+    hostname: mqtt
+    networks:
+      - app
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./volumes/etc/mqtt/config/:/mosquitto/config/
+      - ./volumes/etc/mqtt/log/:/mosquitto/log/
+      - ./volumes/data/mqtt:/mosquitto/data/
+    ports:
+      - 1883:1883
+      - 9001:9001
+networks:
+  app:
+    driver: bridge

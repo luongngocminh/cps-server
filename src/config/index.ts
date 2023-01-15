@@ -19,8 +19,15 @@ export default {
   /**
    * That long string from mlab
    */
-  databaseURL: process.env.MONGODB_URI,
+  mongoURL: process.env.MONGODB_URI,
+  mqttURL: process.env.MQTT_URI,
 
+  influx: {
+    url: process.env.INFLUX_URI,
+    token: process.env.INFLUX_TOKEN,
+    org: process.env.INFLUX_ORG,
+    bucket: process.env.INFLUX_BUCKET,
+  },
   /**
    * Your secret sauce
    */
@@ -48,7 +55,7 @@ export default {
    */
   agendash: {
     user: 'agendash',
-    password: '123456'
+    password: '123456',
   },
   /**
    * API configs
@@ -62,6 +69,6 @@ export default {
   emails: {
     apiKey: process.env.MAILGUN_API_KEY,
     apiUsername: process.env.MAILGUN_USERNAME,
-    domain: process.env.MAILGUN_DOMAIN
-  }
+    domain: process.env.MAILGUN_DOMAIN,
+  },
 };
