@@ -7,6 +7,7 @@ import influxFactory from './influx';
 import mqtt from 'mqtt';
 import config from '@/config';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default ({ mongoConnection, models }: { mongoConnection; models: { name: string; model: any }[] }) => {
   try {
     models.forEach(m => {

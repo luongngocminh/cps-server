@@ -14,7 +14,7 @@ export default class MailerService {
       from: 'Excited User <me@samples.mailgun.org>',
       to: [email],
       subject: 'Hello',
-      text: 'Testing some Mailgun awesomness!'
+      text: 'Testing some Mailgun awesomness!',
     };
     try {
       this.emailClient.messages.create(this.emailDomain, data);

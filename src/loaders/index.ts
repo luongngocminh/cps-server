@@ -26,14 +26,24 @@ export default async function ({ expressApp }) {
     model: require('../models/user').default,
   };
 
+  const nodeModel = {
+    name: 'nodeModel',
+    // Notice the require syntax and the '.default'
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    model: require('../models/node').default,
+  };
+
+  const roleModel = {
+    name: 'roleModel',
+    // Notice the require syntax and the '.default'
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    model: require('../models/role').default,
+  };
+
   // It returns the agenda instance because it's needed in the subsequent loaders
   const { agenda, mqtt } = dependencyInjectorLoader({
     mongoConnection,
-    models: [
-      userModel,
-      // salaryModel,
-      // whateverModel
-    ],
+    models: [userModel, nodeModel, roleModel],
   });
   Logger.info('✌️ Dependency Injector loaded');
 

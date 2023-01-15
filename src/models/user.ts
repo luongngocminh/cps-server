@@ -21,8 +21,8 @@ const User = new mongoose.Schema(
     salt: String,
 
     role: {
-      type: String,
-      default: 'user',
+      type: mongoose.Types.ObjectId,
+      ref: 'Role',
     },
   },
   { timestamps: true },

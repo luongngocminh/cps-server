@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/explicit-module-boundary-types */
 import { Container } from 'typedi';
 import { EventSubscriber, On } from 'event-dispatch';
 import events from './events';
@@ -24,7 +25,7 @@ export default class UserSubscriber {
     try {
       const UserModel = Container.get('UserModel') as mongoose.Model<IUser & mongoose.Document>;
 
-      UserModel.update({ _id }, { $set: { lastLogin: new Date() } });
+      UserModel.updateOne({ _id }, { $set: { lastLogin: new Date() } });
     } catch (e) {
       Logger.error(`🔥 Error on event ${events.user.signIn}: %o`, e);
 
