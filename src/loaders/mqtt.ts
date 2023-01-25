@@ -1,4 +1,5 @@
 import MQTTService from '@/services/mqtt';
+import { TOPICS } from '@/utils';
 import Container from 'typedi';
 import Logger from './logger';
 
@@ -7,6 +8,11 @@ export default ({ client }) => {
 
   client.on('connect', function (connack) {
     Logger.info('MQTT Client connected: %o', connack);
+    client.subscribe(TOPICS.SVR_IN, function (err) {
+      if (!err) {
+        Logger.info('Subscribed to topic "svr/in"');
+      }
+    });
   });
 
   client.on('error', function (err: any) {
@@ -30,6 +36,7 @@ export default ({ client }) => {
   });
 
   client.on('message', (topic, message, packet) => {
+    console.log(topic, message);
     Container.get(MQTTService).processIncomingMessage(topic, message, packet);
   });
 };

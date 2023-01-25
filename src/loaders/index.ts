@@ -6,6 +6,8 @@ import mqttLoader from './mqtt';
 import Logger from './logger';
 //We have to import at least all the events once so they can be triggered
 import './events';
+import NodeRegistryService from '@/services/node-registry';
+import Container from 'typedi';
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export default async function ({ expressApp }) {
@@ -55,4 +57,7 @@ export default async function ({ expressApp }) {
 
   mqttLoader({ client: mqtt });
   Logger.info('✌️ MQTT loaded');
+
+  // initalized Node Registry
+  Container.get(NodeRegistryService);
 }

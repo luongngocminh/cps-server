@@ -21,6 +21,6 @@ export interface IBytesPacket {
   type: IPacketType;
   status: IPacketStatus;
   ts: number;
-  data: unknown;
+  data: Uint8Array;
   id: string;
 }
