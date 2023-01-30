@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 export interface INode {
   nid: number;
-  status: number; // 0: connected, 1: disconnected
+  status: number; // 0: connected, 1: disconnected, 2: failed
   type: number; // Node type: 0 - sensor, 1 - station
 
   latestConnectedAt: Date;

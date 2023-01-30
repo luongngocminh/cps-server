@@ -8,6 +8,7 @@ import { TOPICS, uint8arr2int } from '@/utils';
 import { EventDispatcher, EventDispatcherInterface } from '@/decorators/eventDispatcher';
 import events from '@/subscribers/events';
 import NodeRegistryService from './node-registry';
+import { Point, WriteApi } from '@influxdata/influxdb-client';
 
 @Service()
 export default class MQTTService {
@@ -15,6 +16,7 @@ export default class MQTTService {
     @Inject('logger') private logger: Logger,
     @Inject('mqttClient') private mqtt: MqttClient,
     @Inject('nodeModel') private nodeModel: Models.NodeModel,
+    @Inject('influxWrite') private influxWrite: () => WriteApi,
     private nodeRegistry: NodeRegistryService,
     @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
   ) {}
@@ -37,7 +39,7 @@ export default class MQTTService {
       const handler = {
         [IPacketType.CONN]: this.processConnectMsg,
         [IPacketType.DISCONN]: this.processDisconnectMsg,
-        [IPacketType.RES]: this.processResponseMsg,
+        // [IPacketType.RES]: this.processResponseMsg,
         [IPacketType.INFO]: this.processInfoMsg,
         [IPacketType.DATA]: this.processDataMsg,
       };
@@ -89,6 +91,7 @@ export default class MQTTService {
   async processConnectMsg(payload: IBytesPacket) {
     this.logger.info('Connected to %s', payload.node.id);
 
+    const writeApi = this.influxWrite();
     // •	Battery: 1 Byte 0-100
     // •	RTC: 4 Bytes Unix epoch
     // •	Temperature: 1 Byte 0-255
@@ -137,7 +140,116 @@ export default class MQTTService {
     this.nodeRegistry.delete(nodeObject.nid, nodeObject.type);
     this.eventDispatcher.dispatch(events.node.onDisconnect, nodeObject);
   }
-  processInfoMsg(payload: IBytesPacket) {}
-  processResponseMsg(payload: IBytesPacket) {}
-  processDataMsg(payload: IBytesPacket) {}
+
+  async processInfoMsg(payload: IBytesPacket) {
+    this.logger.info('Info received from %s', payload.node.id);
+    const writeApi = this.influxWrite();
+
+    // •	Battery: 1 Byte 0-100
+    // •	RTC: 4 Bytes Unix epoch
+    // •	Temperature: 1 Byte 0-255
+    const data = payload.data;
+    const battery = data[0];
+    const rtc = uint8arr2int(data.slice(1, -1));
+    const temperature = data[data.length - 1];
+    this.logger.info('Battery: %s', battery);
+    this.logger.info('RTC: %s', rtc);
+    this.logger.info('Temperature: %s', temperature);
+    const points = [];
+    points.push(
+      new Point('battery')
+        .tag('nodeid', '' + payload.node.id)
+        .tag('ntype', 'sensor')
+        .floatField('value', battery)
+        .timestamp(payload.ts),
+    );
+    points.push(
+      new Point('temperature')
+        .tag('nodeid', '' + payload.node.id)
+        .floatField('value', temperature)
+        .timestamp(payload.ts),
+    );
+    points.push(
+      new Point('rtc')
+        .tag('nodeid', '' + payload.node.id)
+        .intField('value', rtc)
+        .timestamp(payload.ts),
+    );
+    writeApi.writePoints(points);
+    // Push this node using current mongoose node model
+    const options = { upsert: true, new: true, setDefaultsOnInsert: true };
+
+    const nodeObject = await this.nodeModel
+      .findOneAndUpdate(
+        { nid: payload.node.id, type: payload.node.type },
+        { latestConnectedAt: new Date(), battery, rtc, temperature },
+        options,
+      )
+      .exec();
+
+    this.nodeRegistry.update(nodeObject);
+    await writeApi.close();
+  }
+
+  // processResponseMsg(payload: IBytesPacket) {}
+  async processDataMsg(payload: IBytesPacket) {
+    this.logger.info('DATA received from %s', payload.node.id);
+    const writeApi = this.influxWrite();
+    const data = payload.data;
+    const points = [];
+    if (payload.node.type === 0) {
+      // sensor
+      for (let i = 0; i < data.length / 10; i++) {
+        const subdata = data.slice(i * 10, i * 10 + 10);
+        const v_off = uint8arr2int(subdata.slice(0, 2));
+        const v_shift = uint8arr2int(subdata.slice(2, 4));
+        const i_curr = uint8arr2int(subdata.slice(4, 6));
+        const ts = uint8arr2int(subdata.slice(6, 10));
+
+        points.push(
+          new Point('v_off')
+            .tag('nodeid', '' + payload.node.id)
+            .floatField('value', v_off)
+            .timestamp(ts),
+        );
+        points.push(
+          new Point('v_shift')
+            .tag('nodeid', '' + payload.node.id)
+            .floatField('value', v_shift)
+            .timestamp(ts),
+        );
+        points.push(
+          new Point('i_curr')
+            .tag('nodeid', '' + payload.node.id)
+            .floatField('value', i_curr)
+            .timestamp(ts),
+        );
+      }
+    } else {
+      // station
+      const st_status = data[0];
+      const motor_status = data[1];
+      const contactor_status = data[2];
+      points.push(
+        new Point('st_status')
+          .tag('nodeid', '' + payload.node.id)
+          .floatField('value', st_status)
+          .timestamp(payload.ts),
+      );
+      points.push(
+        new Point('motor_status')
+          .tag('nodeid', '' + payload.node.id)
+          .floatField('value', motor_status)
+          .timestamp(payload.ts),
+      );
+      points.push(
+        new Point('contactor_status')
+          .tag('nodeid', '' + payload.node.id)
+          .floatField('value', contactor_status)
+          .timestamp(payload.ts),
+      );
+    }
+    writeApi.writePoints(points);
+    await writeApi.close();
+  }
 }

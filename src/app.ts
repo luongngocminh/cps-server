@@ -5,9 +5,11 @@ import config from './config';
 import express from 'express';
 
 import Logger from './loaders/logger';
+import { createServer } from 'http';
 
 async function startServer() {
   const app = express();
+  const httpServer = createServer(app);
 
   /**
    * A little hack here
@@ -16,7 +18,7 @@ async function startServer() {
    * So we are using good old require.
    **/
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  await require('./loaders').default({ expressApp: app });
+  await require('./loaders').default({ expressApp: app, httpServer });
 
   app
     .listen(config.port, () => {

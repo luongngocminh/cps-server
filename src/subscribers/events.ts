@@ -10,4 +10,7 @@ export default {
     onConnect: 'onNodeConnect',
     onDisconnect: 'onNodedisconnect',
   },
+  system: {
+    onUpdateState: 'onUpdateState',
+  },
 };
