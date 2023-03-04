@@ -6,9 +6,11 @@ import { Logger } from 'winston';
 import crc32 from 'crc-32';
 import { TOPICS, uint8arr2int } from '@/utils';
 import { EventDispatcher, EventDispatcherInterface } from '@/decorators/eventDispatcher';
+import socketEvents from '@/socketio/events';
 import events from '@/subscribers/events';
 import NodeRegistryService from './node-registry';
 import { Point, WriteApi } from '@influxdata/influxdb-client';
+import { Server } from 'socket.io';
 
 @Service()
 export default class MQTTService {
@@ -17,6 +19,7 @@ export default class MQTTService {
     @Inject('mqttClient') private mqtt: MqttClient,
     @Inject('nodeModel') private nodeModel: Models.NodeModel,
     @Inject('influxWrite') private influxWrite: () => WriteApi,
+    @Inject('io') private io: Server,
     private nodeRegistry: NodeRegistryService,
     @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
   ) {}
@@ -91,7 +94,6 @@ export default class MQTTService {
   async processConnectMsg(payload: IBytesPacket) {
     this.logger.info('Connected to %s', payload.node.id);
 
-    const writeApi = this.influxWrite();
     // •	Battery: 1 Byte 0-100
     // •	RTC: 4 Bytes Unix epoch
     // •	Temperature: 1 Byte 0-255
@@ -111,6 +113,7 @@ export default class MQTTService {
         { latestConnectedAt: new Date(), battery, rtc, temperature },
         options,
       )
+      .lean()
       .exec();
 
     this.nodeRegistry.add(nodeObject);
@@ -156,26 +159,41 @@ export default class MQTTService {
     this.logger.info('RTC: %s', rtc);
     this.logger.info('Temperature: %s', temperature);
     const points = [];
+    const ts = new Date();
     points.push(
       new Point('battery')
         .tag('nodeid', '' + payload.node.id)
         .tag('ntype', 'sensor')
         .floatField('value', battery)
-        .timestamp(payload.ts),
+        .timestamp(ts),
     );
     points.push(
       new Point('temperature')
         .tag('nodeid', '' + payload.node.id)
+        .tag('ntype', 'sensor')
         .floatField('value', temperature)
-        .timestamp(payload.ts),
+        .timestamp(ts),
     );
     points.push(
       new Point('rtc')
         .tag('nodeid', '' + payload.node.id)
+        .tag('ntype', 'sensor')
         .intField('value', rtc)
-        .timestamp(payload.ts),
+        .timestamp(ts),
     );
     writeApi.writePoints(points);
+
+    this.io.emit(socketEvents.node.info, [
+      { _measurement: 'battery', _value: battery, nodeid: payload.node.id, ntype: payload.node.type, _time: ts },
+      {
+        _measurement: 'temperature',
+        _value: temperature,
+        nodeid: payload.node.id,
+        ntype: payload.node.type,
+        _time: ts,
+      },
+      { _measurement: 'rtc', _value: rtc, nodeid: payload.node.id, ntype: payload.node.type, _time: ts },
+    ]);
     // Push this node using current mongoose node model
     const options = { upsert: true, new: true, setDefaultsOnInsert: true };
 
@@ -185,10 +203,17 @@ export default class MQTTService {
         { latestConnectedAt: new Date(), battery, rtc, temperature },
         options,
       )
+      .lean()
       .exec();
 
+    this.io;
     this.nodeRegistry.update(nodeObject);
-    await writeApi.close();
+    try {
+      await writeApi.close();
+    } catch (err) {
+      console.log('Error when closing Write API');
+      console.log(err);
+    }
   }
 
   // processResponseMsg(payload: IBytesPacket) {}
@@ -204,7 +229,7 @@ export default class MQTTService {
         const v_off = uint8arr2int(subdata.slice(0, 2));
         const v_shift = uint8arr2int(subdata.slice(2, 4));
         const i_curr = uint8arr2int(subdata.slice(4, 6));
-        const ts = uint8arr2int(subdata.slice(6, 10));
+        const ts = new Date(uint8arr2int(subdata.slice(6, 10)));
 
         points.push(
           new Point('v_off')

@@ -20,7 +20,7 @@ async function startServer() {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   await require('./loaders').default({ expressApp: app, httpServer });
 
-  app
+  httpServer
     .listen(config.port, () => {
       Logger.info(`
       ################################################

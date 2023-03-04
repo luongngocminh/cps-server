@@ -8,6 +8,13 @@ services:
     restart: always
     volumes:
       - ./volumes/data/influx:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin
+      - DOCKER_INFLUXDB_INIT_ORG=ICEA
+      - DOCKER_INFLUXDB_INIT_BUCKET=cps
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
     networks:
       - app
     ports:

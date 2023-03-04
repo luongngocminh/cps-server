@@ -24,6 +24,11 @@ const User = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: 'Role',
     },
+
+    isAdmin: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

@@ -15,13 +15,16 @@ export default (app: Router) => {
     '/signup',
     celebrate({
       body: Joi.object({
-        name: Joi.string().required(),
+        fullName: Joi.string().required(),
         email: Joi.string().required(),
         password: Joi.string().required(),
+        confirmPassword: Joi.string(),
       }),
     }),
     async (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get('logger');
+      req.body.name = req.body.fullName;
+      delete req.body.confirmPassword;
       logger.debug('Calling Sign-Up endpoint with body: %o', req.body);
       try {
         const authServiceInstance = Container.get(AuthService);
@@ -57,6 +60,28 @@ export default (app: Router) => {
     },
   );
 
+  route.post(
+    '/whitelist',
+    celebrate({
+      body: Joi.object({
+        email: Joi.string().required().email(),
+      }),
+    }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get('logger');
+      logger.debug('Calling whitelist endpoint with body: %o', req.body);
+      try {
+        const { email } = req.body;
+        const authServiceInstance = Container.get(AuthService);
+        await authServiceInstance.whiteListEmail(email);
+
+        return res.json({ success: true }).status(200);
+      } catch (e) {
+        logger.error('🔥 error: %o', e);
+        return next(e);
+      }
+    },
+  );
   /**
    * @TODO Let's leave this as a place holder for now
    * The reason for a logout route could be deleting a 'push notification token'

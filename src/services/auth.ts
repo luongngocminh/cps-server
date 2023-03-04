@@ -12,6 +12,7 @@ import events from '@/subscribers/events';
 export default class AuthService {
   constructor(
     @Inject('userModel') private userModel: Models.UserModel,
+    @Inject('whitelistModel') private whitelistModel: Models.WhitelistModel,
     private mailer: MailerService,
     @Inject('logger') private logger,
     @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
@@ -19,6 +20,10 @@ export default class AuthService {
 
   public async SignUp(userInputDTO: IUserInputDTO): Promise<{ user: IUser; token: string }> {
     try {
+      const whitelist = await this.whitelistModel.exists({ email: userInputDTO.email });
+      if (!whitelist) {
+        throw new Error('Email is not whitelisted, Contact your admin for more info.');
+      }
       const salt = randomBytes(32);
 
       /**
@@ -99,6 +104,16 @@ export default class AuthService {
     }
   }
 
+  async whiteListEmail(email: string) {
+    const existed = await this.userModel.exists({ email });
+
+    if (existed) {
+      throw new Error('Email whitelisted');
+    }
+
+    return await this.userModel.create({ email });
+  }
+
   private generateToken(user) {
     const today = new Date();
     const exp = new Date(today);
@@ -119,6 +134,7 @@ export default class AuthService {
         _id: user._id, // We are gonna use this in the middleware 'isAuth'
         role: user.role,
         name: user.name,
+        email: user.email,
         exp: exp.getTime() / 1000,
       },
       config.jwtSecret,

@@ -5,8 +5,9 @@ import { Logger } from 'winston';
 import { Server } from 'socket.io';
 import events from '@/socketio/events';
 
-const WINDOWTMS = 1000; // 1 second
+const WINDOWTMS = 5000; // 1 second
 const SESSIONTMS = 5 * 60 * 1000; // 5 min
+const NODETIMEOUT = 60 * 1000; // 1hour
 
 class ObservableMap<K, T> extends Map {
   setHandler: (v: ObservableMap<K, T>) => void;
@@ -16,14 +17,16 @@ class ObservableMap<K, T> extends Map {
   }
 
   set(key: K, value: T) {
+    super.set(key, value);
     this.setHandler(this);
-    return super.set(key, value);
+    return this;
   }
 }
 
 Service();
 export default class NodeRegistryService {
   private nodes: ObservableMap<string, INode>;
+  private nodeTimer: Map<string, NodeJS.Timeout>;
 
   private sessionFlag = false;
   private windowFlag = false;
@@ -40,16 +43,16 @@ export default class NodeRegistryService {
     this.init();
   }
 
-  onRegistryChanged(map: Map<string, INode>) {
-    // TODO: emit event registry changed
+  onRegistryChanged = (map: Map<string, INode>) => {
     this.io.emit(events.node.registryUpdated, Object.fromEntries(map));
-  }
+  };
 
   async init() {
     this.nodes = new ObservableMap<string, INode>(this.onRegistryChanged);
+    this.nodeTimer = new Map<string, NodeJS.Timeout>();
     this.temporaryNodesRegister = new Map<string, INode>();
     // populate the memory registry with data from mongodb
-    const nodes = await this.nodeModel.find({});
+    const nodes = await this.nodeModel.find({}).lean().exec();
     for (const node of nodes) {
       this.add(node);
     }
@@ -57,15 +60,25 @@ export default class NodeRegistryService {
   }
 
   getAll() {
-    return this.nodes.values();
+    return [...this.nodes].map(([_, value]) => value);
   }
 
   add(node: INode) {
     const key = getNodeKey(node.nid, node.type);
+
     if (this.nodes.has(key)) {
       this.logger.warn('Potentially duplicated node: %s', key);
     }
+    // Set timer
     this.nodes.set(key, node);
+    this.nodeTimer.set(
+      key,
+      setTimeout(() => {
+        const node = this.nodes.get(key);
+        this.nodes.set(key, { ...node, status: 1 }); // disconnected
+        this.logger.warn(`Node ${key} has not response in an hour, disconnecting...`);
+      }, NODETIMEOUT),
+    );
   }
 
   update(node: INode) {
@@ -77,8 +90,8 @@ export default class NodeRegistryService {
       // Initialize a new info session
       this.sessionFlag = true;
       this.windowFlag = true;
-      this._sessionTimer = setTimeout(this.endSession, SESSIONTMS);
-      this._windowTimer = setTimeout(this.endWindow, WINDOWTMS);
+      this._sessionTimer = setTimeout(this.endSession.bind(this), SESSIONTMS);
+      this._windowTimer = setTimeout(this.endWindow.bind(this), WINDOWTMS);
     } else {
       if (!this.windowFlag) {
         // Out of given time frame => drifted too far
@@ -91,13 +104,16 @@ export default class NodeRegistryService {
     this.temporaryNodesRegister.set(key, node);
     this.nodes.set(key, node);
     if (this.temporaryNodesRegister.size === this.nodes.size) {
-      this.endSession();
       this.endWindow();
+      this.endSession();
     }
     this.nodes.set(key, node);
+    this.nodeTimer.get(key).refresh();
+    console.log('end update');
   }
 
   private endSession() {
+    this.logger.debug('INFO Session ended');
     if (this._sessionTimer) {
       clearTimeout(this._sessionTimer);
     }
@@ -106,13 +122,14 @@ export default class NodeRegistryService {
   }
 
   private endWindow() {
+    this.logger.debug('INFO Window ended');
     if (this._windowTimer) {
       clearTimeout(this._windowTimer);
     }
 
     this.windowFlag = false;
     if (this.temporaryNodesRegister.size < this.nodes.size) {
-      const faultyNodes = [...this.temporaryNodesRegister.entries()].filter(key => !this.nodes.has(key[0]));
+      const faultyNodes = [...this.nodes.entries()].filter(([key, value]) => !this.temporaryNodesRegister.has(key));
       this.logger.error('Some nodes are not able to checkin in the given time frame: %o', faultyNodes);
       for (const node of faultyNodes) {
         node[1].status = 2; // failed

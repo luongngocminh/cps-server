@@ -9,6 +9,7 @@ export default {
   node: {
     onConnect: 'onNodeConnect',
     onDisconnect: 'onNodedisconnect',
+    onUpdateRegistry: 'onUpdateRegistry',
   },
   system: {
     onUpdateState: 'onUpdateState',

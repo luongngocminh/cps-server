@@ -10,7 +10,9 @@ const Role = new mongoose.Schema(
       type: String,
       required: [true, 'Please enter a full name'],
       index: true,
+      unique: true,
     },
+    perms: [{ type: String }],
   },
   { timestamps: true },
 );

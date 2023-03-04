@@ -12,6 +12,8 @@ export interface INode {
 
   createdAt?: Date;
   updatedAt?: Date;
+
+  timeoutTimer?: NodeJS.Timeout;
 }
 
 const Node = new mongoose.Schema(

@@ -15,32 +15,37 @@ mqttClient.on('connect', function (connack) {
 });
 
 function main() {
-  testConnectNode();
+  let batt = 88;
+  setInterval(() => {
+    testConnectNode(1, 0, 46, (batt -= 2));
+  }, 5000);
+
+  // testConnectNode(2, 1);
   // mqttClient.publish('svr/in');
 }
 
-function testConnectNode() {
+function testConnectNode(id, _type, temp, battery) {
   // const checksum = .slice(-4);
   // const payload = bytes.slice(0, -4);
 
   const version = 0;
   // a Sensor Node with ID 0
   const node = {
-    id: 0,
-    type: 0,
+    id,
+    type: _type,
   };
   const type = 4; // CONN
   const status = 0;
-  const ts = Math.floor(new Date('2012.08.10').getTime() / 1000);
+  const ts = Math.floor(new Date().getTime() / 1000);
   const data = {
-    temperature: 45,
+    temperature: temp,
     rtc: ts,
-    battery: 97,
+    battery: battery,
   };
   const header = Buffer.from([version, node.id, node.type, type, status]);
   const tsbuf = Buffer.alloc(4);
   tsbuf.writeInt32LE(ts, 0);
-  const payload = Buffer.concat([Buffer.from([data.temperature]), tsbuf, Buffer.from([data.battery])]);
+  const payload = Buffer.concat([Buffer.from([data.battery]), tsbuf, Buffer.from([data.temperature])]);
 
   const bytes = Buffer.concat([header, tsbuf, payload]);
   const crc = crc32.buf(bytes);

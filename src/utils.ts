@@ -15,3 +15,37 @@ export function getNodeKey(nid: number, type: number) {
   const key = `${keyPrefix}-${nid}`;
   return key;
 }
+
+// function flatten all values in an object
+export function flattenValues(obj: any) {
+  const result = [];
+
+  function runner(obj: any, res) {
+    for (const value of Object.values(obj)) {
+      if (typeof value === 'object') {
+        runner(value, res);
+      } else {
+        result.push(value);
+      }
+    }
+  }
+  runner(obj, result);
+  return result;
+}
+
+export const PERMISSION = {
+  NODE: {
+    READ: 'NODE:READ',
+    READ_ALL: 'NODE:READ:ALL',
+  },
+  USER: {
+    READ: 'USER:READ',
+    WRITE: 'USER:WRITE',
+  },
+  SYSTEM: {
+    READ: 'SYSTEM:READ',
+    WRITE: 'SYSTEM:WRITE',
+  },
+};
+
+export const PERMLIST = flattenValues(PERMISSION);

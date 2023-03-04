@@ -35,7 +35,12 @@ export default ({
     const mgInstance = new Mailgun(formData);
     const influxQueryFactory = influxFactory.query;
     const influxWriteFactory = influxFactory.write;
-    const socketServer = new SocketServer(httpServer);
+    const socketServer = new SocketServer(httpServer, {
+      cors: {
+        origin: 'http://localhost:4200',
+        methods: ['GET', 'POST'],
+      },
+    });
 
     Container.set('agendaInstance', agendaInstance);
     Container.set('logger', LoggerInstance);
