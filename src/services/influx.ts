@@ -37,7 +37,7 @@ export default class InfluxService {
   private aggregateWindow(q: NodeQuery) {
     const every = q.every ?? '1m';
     const fn = q.fn ?? 'mean';
-    const query = `|> aggregateWindow(every: ${every}, fn: ${fn}, createEmpty: true)`;
+    const query = `|> aggregateWindow(every: ${every}, fn: ${fn})`;
     return [query, `|> yield(name: "${fn}")`].join('\n');
   }
 

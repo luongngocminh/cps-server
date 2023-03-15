@@ -2,10 +2,11 @@ import mongoose from 'mongoose';
 
 export interface INode {
   nid: number;
-  status: number; // 0: connected, 1: disconnected, 2: failed
+  status?: number; // 0: connected, 1: disconnected, 2: failed
   type: number; // Node type: 0 - sensor, 1 - station
 
-  latestConnectedAt: Date;
+  parent?: number;
+  latestConnectedAt?: Date;
   battery?: number;
   rtc?: number;
   temperature?: number;
@@ -29,6 +30,9 @@ const Node = new mongoose.Schema(
       type: Number,
       required: true,
       index: true,
+    },
+    parent: {
+      type: Number,
     },
     status: {
       type: Number,

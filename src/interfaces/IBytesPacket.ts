@@ -1,10 +1,9 @@
 export enum IPacketType {
-  REQ,
-  RES,
-  INFO,
-  DATA,
   CONN,
   DISCONN,
+  INFO,
+  DATA,
+  CMD,
 }
 
 export enum IPacketStatus {
@@ -17,6 +16,7 @@ export interface IBytesPacket {
   node: {
     id: number;
     type: number;
+    parent?: number;
   };
   type: IPacketType;
   status: IPacketStatus;
