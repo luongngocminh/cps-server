@@ -15,7 +15,7 @@ mqttClient.on('connect', function (connack) {
 });
 
 function main() {
-  let batt = 88;
+  // let batt = 88;
 
   // setInterval(() => {
   //   testConnectNode(1, 0, 46, (batt -= 2));

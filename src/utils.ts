@@ -2,8 +2,11 @@ export enum TOPICS {
   SVR_IN = 'svr/in',
   SVR_OUT = 'svr/out',
 }
-export function uint8arr2int(arr: Uint8Array): number {
+export function uint8arr2int(arr: Uint8Array, get16 = false): number {
   const view = new DataView(arr.buffer, 0);
+  if (get16) {
+    return view.getInt16(0, true);
+  }
   return view.getInt32(0, true); // true here represents little-endian
 }
 export function getNodeKey(nid: number, type: number) {

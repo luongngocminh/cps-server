@@ -36,7 +36,6 @@ export default ({ client }) => {
   });
 
   client.on('message', (topic, message, packet) => {
-    console.log(topic, message);
     Container.get(MQTTService).processIncomingMessage(topic, message, packet);
   });
 };

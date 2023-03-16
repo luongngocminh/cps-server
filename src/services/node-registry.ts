@@ -4,10 +4,11 @@ import { Inject, Service } from 'typedi';
 import { Logger } from 'winston';
 import { Server } from 'socket.io';
 import events from '@/socketio/events';
+import _ from 'lodash';
 
 const WINDOWTMS = 5000; // 1 second
 const SESSIONTMS = 5 * 60 * 1000; // 5 min
-const NODETIMEOUT = 60 * 1000; // 1hour
+const NODETIMEOUT = 60 * 60 * 1000; // 1hour
 
 class ObservableMap<K, T> extends Map {
   setHandler: (v: ObservableMap<K, T>) => void;
@@ -43,8 +44,12 @@ export default class NodeRegistryService {
     this.init();
   }
 
-  onRegistryChanged = (map: Map<string, INode>) => {
+  emitChangesDebounce = _.debounce(map => {
     this.io.emit(events.node.registryUpdated, Object.fromEntries(map));
+  }, 1000);
+
+  onRegistryChanged = (map: Map<string, INode>) => {
+    this.emitChangesDebounce(map);
   };
 
   async init() {
@@ -81,6 +86,14 @@ export default class NodeRegistryService {
     );
   }
 
+  simpleUpdate(node: INode) {
+    const key = getNodeKey(node.nid, node.type);
+    if (!this.nodes.has(key)) {
+      return this.logger.warn('Unregistered node encountered: %s', key);
+    }
+    this.nodes.set(key, node);
+  }
+
   update(node: INode) {
     const key = getNodeKey(node.nid, node.type);
     if (!this.nodes.has(key)) {
@@ -107,9 +120,7 @@ export default class NodeRegistryService {
       this.endWindow();
       this.endSession();
     }
-    this.nodes.set(key, node);
     this.nodeTimer.get(key).refresh();
-    console.log('end update');
   }
 
   private endSession() {
@@ -137,6 +148,11 @@ export default class NodeRegistryService {
       }
       // TODO: Set System status to be Errored
     }
+  }
+
+  get(nid: number, type: number) {
+    const key = getNodeKey(nid, type);
+    return this.nodes.get(key);
   }
 
   delete(nid: number, type: number) {

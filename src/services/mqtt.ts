@@ -12,7 +12,7 @@ import NodeRegistryService from './node-registry';
 import { Point, WriteApi } from '@influxdata/influxdb-client';
 import { Server } from 'socket.io';
 import { INode } from '@/models/node';
-import { addMinutes } from 'date-fns';
+import { addMinutes, addSeconds } from 'date-fns';
 
 @Service()
 export default class MQTTService {
@@ -24,10 +24,9 @@ export default class MQTTService {
     @Inject('io') private io: Server,
     private nodeRegistry: NodeRegistryService,
     @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
-  ) { }
+  ) {}
 
   processIncomingMessage(topic: TOPICS, message: Buffer, packet: Packet): void {
-    console.log(topic, message, packet);
     if (!Object.values(TOPICS).includes(topic)) {
       this.logger.warn('Invalid Topic received: %s', topic);
       return;
@@ -40,7 +39,6 @@ export default class MQTTService {
         return;
       }
       const payload = this.unpackMessage(bytes);
-      console.log(payload);
       const handler = {
         [IPacketType.CONN]: this.processConnectMsg,
         [IPacketType.DISCONN]: this.processDisconnectMsg,
@@ -162,13 +160,8 @@ export default class MQTTService {
 
   validateMessage(bytes: Uint8Array): boolean {
     const checksum = uint8arr2int(bytes.slice(-4));
-    console.log('checklsum', checksum);
     const payload = bytes.slice(0, -4);
-    console.log(payload);
-
     const crc = crc32.buf(payload);
-    console.log('crc', crc);
-
     return checksum === crc;
   }
 
@@ -226,6 +219,7 @@ export default class MQTTService {
 
   async processInfoMsg(payload: IBytesPacket) {
     this.logger.info('Info received from %s', payload.node.id);
+    const ntype = payload.node.type ? 'station' : 'sensor';
     const writeApi = this.influxWrite();
 
     // •	Battery: 1 Byte 0-100
@@ -244,7 +238,7 @@ export default class MQTTService {
       points.push(
         new Point('battery')
           .tag('nodeid', '' + payload.node.id)
-          .tag('ntype', 'sensor')
+          .tag('ntype', ntype)
           .floatField('value', battery)
           .timestamp(ts),
       );
@@ -252,17 +246,18 @@ export default class MQTTService {
     points.push(
       new Point('temperature')
         .tag('nodeid', '' + payload.node.id)
-        .tag('ntype', 'sensor')
+        .tag('ntype', ntype)
         .floatField('value', temperature)
         .timestamp(ts),
     );
     points.push(
       new Point('rtc')
         .tag('nodeid', '' + payload.node.id)
-        .tag('ntype', 'sensor')
+        .tag('ntype', ntype)
         .intField('value', rtc)
         .timestamp(ts),
     );
+    console.log(points);
     writeApi.writePoints(points);
 
     this.io.emit(socketEvents.node.info, [
@@ -304,27 +299,55 @@ export default class MQTTService {
     const data = payload.data;
     const points = [];
     const nid = '' + payload.node.id;
+    const ts = new Date(payload.ts * 1000);
     if (payload.node.type === 0) {
       // sensor
-      const v_on = uint8arr2int(data.slice(0, 2));
-      const v_off = uint8arr2int(data.slice(2, 4));
-      const v_na = uint8arr2int(data.slice(6, 8));
-      const ts = new Date(uint8arr2int(data.slice(8, 12)));
+      const v_on = uint8arr2int(data.slice(0, 2), true);
+      const v_off = uint8arr2int(data.slice(2, 4), true);
+      const v_na = uint8arr2int(data.slice(4, 6), true);
 
       points.push(new Point('v_off').tag('nodeid', nid).tag('ntype', 'sensor').intField('value', v_off).timestamp(ts));
       points.push(new Point('v_on').tag('nodeid', nid).tag('ntype', 'sensor').intField('value', v_on).timestamp(ts));
       points.push(new Point('v_na').tag('nodeid', nid).tag('ntype', 'sensor').intField('value', v_na).timestamp(ts));
     } else {
       // station
-      const v_shift = uint8arr2int(data.slice(0, 2));
-      const i_p = uint8arr2int(data.slice(2, 4));
-      const ts = new Date(uint8arr2int(data.slice(4, 8)));
+      const v_shift = uint8arr2int(data.slice(0, 2), true);
+      const i_p = uint8arr2int(data.slice(2, 4), true);
       points.push(new Point('i_p').tag('nodeid', nid).tag('ntype', 'station').intField('value', i_p).timestamp(ts));
       points.push(
         new Point('v_shift').tag('nodeid', nid).tag('ntype', 'station').intField('value', v_shift).timestamp(ts),
       );
     }
+    console.log(points);
     writeApi.writePoints(points);
-    await writeApi.close();
+    try {
+      await writeApi.close();
+    } catch (err) {
+      console.log('Error when closing Write API');
+      console.log(err);
+    }
+  }
+
+  async sendTriggerCommand() {
+    const node = {
+      nid: 0xff, // broadcast,
+      type: 0,
+    };
+    const command = 0x00; // trigger
+    const nextTenSecond = addSeconds(new Date(), 10);
+    const unixEpoch = Math.floor(nextTenSecond.getTime() / 1000);
+    // convert nextTenSecond to 4 bytes using Buffer
+    const buffer = Buffer.alloc(4);
+    buffer.writeUInt32LE(unixEpoch);
+    const payload = Buffer.concat([Buffer.from([command]), buffer]);
+
+    const packet = this.packMessage(node, IPacketType.CMD, payload);
+    this.mqtt.publish(TOPICS.SVR_OUT, packet, () => {
+      this.logger.info('Trigger command sent to all nodes');
+      this.nodeRegistry.getAll().forEach(node => {
+        this.nodeRegistry.simpleUpdate({ ...node, nextTriggerAt: nextTenSecond });
+      });
+    });
+    //
   }
 }

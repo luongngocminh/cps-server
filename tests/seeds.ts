@@ -20,11 +20,11 @@ function getRandomInt(min, max) {
 }
 
 async function main() {
-  const now = new Date();
+  // const now = new Date();
   const writeAPI = write();
 
   // Generate random data for node health monitoring
-  let earlier = subHours(now, 12);
+  // let earlier = subHours(now, 12);
   // while (compareAsc(now, earlier)) {
   //   console.log('Generating for ', format(earlier, 'HH:mm:ss'));
   //   await gen(writeAPI, 0, 'sensor', earlier);

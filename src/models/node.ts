@@ -15,6 +15,7 @@ export interface INode {
   updatedAt?: Date;
 
   timeoutTimer?: NodeJS.Timeout;
+  nextTriggerAt?: Date;
 }
 
 const Node = new mongoose.Schema(
@@ -47,6 +48,7 @@ const Node = new mongoose.Schema(
     temperature: {
       type: Number,
     },
+    nextTriggerAt: { type: Date },
   },
   { timestamps: true },
 );
