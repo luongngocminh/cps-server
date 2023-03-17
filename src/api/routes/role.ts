@@ -1,4 +1,5 @@
 import RoleService from '@/services/role';
+import { PERMISSION } from '@/utils';
 import { celebrate, Joi } from 'celebrate';
 import { Router, Request, Response, NextFunction } from 'express';
 import Container from 'typedi';
@@ -13,6 +14,7 @@ export default (app: Router) => {
     '/',
     middlewares.isAuth,
     middlewares.attachCurrentUser,
+    middlewares.hasPerms([PERMISSION.ROLE.READ]),
     async (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get('logger');
       const roleServices = Container.get(RoleService);
@@ -28,13 +30,14 @@ export default (app: Router) => {
 
   route.post(
     '/',
+    middlewares.isAuth,
+    middlewares.hasPerms([PERMISSION.ROLE.WRITE]),
     celebrate({
       body: Joi.object({
         name: Joi.string().required(),
         perms: Joi.array().required(),
       }),
     }),
-    middlewares.isAuth,
     async (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get('logger');
       const roleServices = Container.get(RoleService);

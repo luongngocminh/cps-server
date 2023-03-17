@@ -10,10 +10,33 @@ export default class UserService {
     private mailer: MailerService,
     private roleService: RoleService,
     @Inject('logger') private logger, // @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
-  ) {}
+  ) { }
 
   getAllUsers() {
     return this.userModel.find({}).select('-password -salt').populate('role').lean().exec();
+  }
+
+  async updateUser(id: string, name: string, email: string, roleName: string) {
+    const user = this.userModel.findOne({ _id: id });
+    if (!user) {
+      throw new Error(`User ${id} not found`);
+    }
+    const roleData = await this.roleService.getByName(roleName);
+    if (!roleData) {
+      throw new Error(`Role  not found`);
+    }
+
+    return user.updateOne({ _id: id }, { name, email, role: roleData._id }, { new: true }).exec();
+  }
+
+  async deleteUser(id: string) {
+    const user = this.userModel.findOne({ _id: id });
+
+    if (!user) {
+      throw new Error(`User ${id} not found`);
+    }
+
+    return user.deleteOne();
   }
 
   async whitelistEmail(email: string, addedById: string) {

@@ -28,7 +28,7 @@
     "node",
     "express"
   ],
-  "author": "Santiago Quinteros",
+  "author": "Luong Minh",
   "license": "ISC",
   "dependencies": {
     "@influxdata/influxdb-client": "^1.33.0",

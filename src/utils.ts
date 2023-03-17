@@ -49,6 +49,10 @@ export const PERMISSION = {
     READ: 'SYSTEM:READ',
     WRITE: 'SYSTEM:WRITE',
   },
+  ROLE: {
+    READ: 'ROLE:READ',
+    WRITE: 'ROLE:WRITE',
+  },
 };
 
 export const PERMLIST = flattenValues(PERMISSION);

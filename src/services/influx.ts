@@ -11,11 +11,12 @@ interface NodeQuery {
   ntype?: string[];
   every?: string;
   fn?: string;
+  createEmpty?: boolean;
 }
 
 @Service()
 export default class InfluxService {
-  constructor(@Inject('logger') private logger: Logger, @Inject('influxQuery') private query: () => QueryApi) {}
+  constructor(@Inject('logger') private logger: Logger, @Inject('influxQuery') private query: () => QueryApi) { }
 
   private buildQuery(q: NodeQuery) {
     const query = [];
@@ -37,7 +38,9 @@ export default class InfluxService {
   private aggregateWindow(q: NodeQuery) {
     const every = q.every ?? '1m';
     const fn = q.fn ?? 'mean';
-    const query = `|> aggregateWindow(every: ${every}, fn: ${fn})`;
+    const createEmpty = q.createEmpty ? 'true' : 'false';
+
+    const query = `|> aggregateWindow(every: ${every}, fn: ${fn}, createEmpty: ${createEmpty})`;
     return [query, `|> yield(name: "${fn}")`].join('\n');
   }
 

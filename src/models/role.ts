@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 export interface IRole {
   name: string;
+  perms: string[];
 }
 
 const Role = new mongoose.Schema(
