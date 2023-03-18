@@ -30,15 +30,12 @@ export default (app: Router) => {
     },
   );
 
-  // CRUD User if only admin
-  // Update User if only admin or self
   route.post(
-    '/update',
+    '/update/:id',
     middlewares.isAuth,
     middlewares.hasPerms([PERMISSION.USER.READ, PERMISSION.USER.WRITE]),
     celebrate({
       body: Joi.object({
-        id: Joi.string().required(),
         name: Joi.string().required(),
         email: Joi.string().required(),
       }),
@@ -47,7 +44,8 @@ export default (app: Router) => {
       const logger: Logger = Container.get('logger');
       const UserServiceInstance = Container.get(UserService);
       try {
-        const { id, name, email, role } = req.body;
+        const { id } = req.params;
+        const { name, email, role } = req.body;
         const result = UserServiceInstance.updateUser(id, name, email, role);
         return res.json(result).status(200);
       } catch (e) {
@@ -59,14 +57,14 @@ export default (app: Router) => {
   // Delete User if only admin
   // Whitelist User if only admin
   route.post(
-    '/delete',
+    '/delete/:id',
     middlewares.isAuth,
     middlewares.hasPerms([PERMISSION.USER.READ, PERMISSION.USER.WRITE]),
     (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get('logger');
       const UserServiceInstance = Container.get(UserService);
       try {
-        const { id } = req.body;
+        const { id } = req.params;
         const result = UserServiceInstance.deleteUser(id);
         return res.json(result).status(200);
       } catch (e) {

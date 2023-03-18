@@ -51,4 +51,29 @@ export default (app: Router) => {
       }
     },
   );
+
+  route.post(
+    '/update/:id',
+    middlewares.isAuth,
+    middlewares.hasPerms([PERMISSION.ROLE.WRITE]),
+    celebrate({
+      body: Joi.object({
+        name: Joi.string().required(),
+        perms: Joi.array().required(),
+      }),
+    }),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get('logger');
+      const roleServices = Container.get(RoleService);
+
+      const { name, perms } = req.body;
+      const { id } = req.params;
+      try {
+        return res.json(await roleServices.updateRole(id, name, perms));
+      } catch (e) {
+        logger.error('🔥 error: %o', e);
+        return next(e);
+      }
+    },
+  );
 };

@@ -5,6 +5,8 @@ import { IUserInputDTO } from '@/interfaces/IUser';
 import middlewares from '../middlewares';
 import { celebrate, Joi } from 'celebrate';
 import { Logger } from 'winston';
+import { PERMISSION } from '@/utils';
+import UserService from '@/services/user';
 
 const route = Router();
 
@@ -76,6 +78,22 @@ export default (app: Router) => {
         await authServiceInstance.whiteListEmail(email);
 
         return res.json({ success: true }).status(200);
+      } catch (e) {
+        logger.error('🔥 error: %o', e);
+        return next(e);
+      }
+    },
+  );
+
+  route.get(
+    '/whitelist',
+    middlewares.isAuth,
+    middlewares.hasPerms([PERMISSION.USER.READ]),
+    async (req: Request, res: Response, next: NextFunction) => {
+      const logger: Logger = Container.get('logger');
+      const UserServiceInstance = Container.get(UserService);
+      try {
+        return res.json({ data: await UserServiceInstance.getWhitelistedUsers() }).status(200);
       } catch (e) {
         logger.error('🔥 error: %o', e);
         return next(e);

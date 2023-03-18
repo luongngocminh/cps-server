@@ -5,6 +5,7 @@ import agendash from './routes/agendash';
 import node from './routes/node';
 import role from './routes/role';
 import data from './routes/data';
+import permissions from './routes/permissions';
 
 // guaranteed to get dependencies
 export default () => {
@@ -14,6 +15,7 @@ export default () => {
   data(app);
   node(app);
   role(app);
+  permissions(app);
   agendash(app);
 
   return app;

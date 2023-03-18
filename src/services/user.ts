@@ -39,6 +39,10 @@ export default class UserService {
     return user.deleteOne();
   }
 
+  getWhitelistedUsers() {
+    return this.whitelistModel.find({}).lean().exec();
+  }
+
   async whitelistEmail(email: string, addedById: string) {
     // create mongoose object in whitelist model
     // mongoose create if not exist

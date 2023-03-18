@@ -14,6 +14,9 @@ const hasPerms = (perms: string[]) => {
       if (!userRecord) {
         return res.sendStatus(401);
       }
+      if (userRecord.name === 'admin') {
+        return next();
+      }
       const unauthorizedPermissions = perms.filter(p => (userRecord.role as IRole).perms.includes(p));
       if (unauthorizedPermissions.length > 0) {
         return res.sendStatus(401);

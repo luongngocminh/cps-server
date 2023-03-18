@@ -105,13 +105,13 @@ export default class AuthService {
   }
 
   async whiteListEmail(email: string) {
-    const existed = await this.userModel.exists({ email });
+    const existed = await this.whitelistModel.exists({ email });
 
     if (existed) {
       throw new Error('Email whitelisted');
     }
 
-    return await this.userModel.create({ email });
+    return await this.whitelistModel.create({ email });
   }
 
   private generateToken(user) {
