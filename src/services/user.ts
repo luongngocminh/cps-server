@@ -9,8 +9,7 @@ export default class UserService {
     @Inject('whitelistModel') private whitelistModel: Models.WhitelistModel,
     private mailer: MailerService,
     private roleService: RoleService,
-    @Inject('logger') private logger, // @EventDispatcher() private eventDispatcher: EventDispatcherInterface,
-  ) { }
+  ) {}
 
   getAllUsers() {
     return this.userModel.find({}).select('-password -salt').populate('role').lean().exec();

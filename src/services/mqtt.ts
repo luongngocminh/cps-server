@@ -328,13 +328,35 @@ export default class MQTTService {
     }
   }
 
-  async sendTriggerCommand() {
+  async sendTurnOffCommand(node: INode) {
+    const command = 0x03; // turn off
+    const payload = Buffer.from([command]);
+    const packet = this.packMessage(node, IPacketType.CMD, payload);
+    this.mqtt.publish(TOPICS.SVR_OUT, packet, () => {
+      this.logger.info('Turn off command sent to node %s', node.nid);
+    });
+  }
+
+  async broadcastAbortCommand() {
+    const node = {
+      nid: 0xff, // broadcast,
+      type: 0,
+    };
+    const command = 0xff; // abort
+    const payload = Buffer.from([command]);
+    const packet = this.packMessage(node, IPacketType.CMD, payload);
+    this.mqtt.publish(TOPICS.SVR_OUT, packet, () => {
+      this.logger.info('Abort command sent to node %s', node.nid);
+    });
+  }
+
+  async broadcastTriggerCommand() {
     const node = {
       nid: 0xff, // broadcast,
       type: 0,
     };
     const command = 0x00; // trigger
-    const nextTenSecond = addSeconds(new Date(), 10);
+    const nextTenSecond = addSeconds(new Date(), 50);
     const unixEpoch = Math.floor(nextTenSecond.getTime() / 1000);
     // convert nextTenSecond to 4 bytes using Buffer
     const buffer = Buffer.alloc(4);
@@ -345,7 +367,7 @@ export default class MQTTService {
     this.mqtt.publish(TOPICS.SVR_OUT, packet, () => {
       this.logger.info('Trigger command sent to all nodes');
       this.nodeRegistry.getAll().forEach(node => {
-        this.nodeRegistry.simpleUpdate({ ...node, nextTriggerAt: nextTenSecond });
+        this.nodeRegistry.update({ ...node, nextTriggerAt: nextTenSecond });
       });
     });
     //

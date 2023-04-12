@@ -13,7 +13,7 @@ const mqttClient = mqtt.connect(config.mqttURL, {
   password: 'password',
 });
 
-const INTERVAL_MS = 20_000;
+const INTERVAL_MS = 5_000;
 
 const nodeInfo = {
   nid: NODEID,
@@ -122,7 +122,7 @@ function sendDATA(node) {
   tsbuf.writeInt32LE(node.rtc, 0);
   // ip is int 5486 +- 1
   // vshift is int 320 +- 1
-  const ip = getRandomInt(5485, 5487);
+  const ip = getRandomInt(5480, 548);
   const vshift = getRandomInt(319, 321);
 
   // pack ip and vshift as 2 bytes
@@ -138,7 +138,7 @@ function sendDATA(node) {
   });
 }
 
-mqttClient.on('connect', function (connack) {
+mqttClient.on('connect', function(connack) {
   console.log('MQTT Client connected: %o', connack);
   // subscribe to topic SVR_OUT
   mqttClient.subscribe(TOPICS.SVR_OUT, (err, granted) => {
@@ -150,9 +150,15 @@ mqttClient.on('connect', function (connack) {
       setInterval(() => {
         sendINFO(nodeInfo);
       }, INTERVAL_MS);
+
+      setInterval(() => {
+        sendDATA(nodeInfo);
+      }, 20000);
     }
   });
 });
+
+let sendDataTimeout: NodeJS.Timeout;
 
 mqttClient.on('message', (topic, message, packet) => {
   if (topic !== TOPICS.SVR_OUT) {
@@ -171,7 +177,7 @@ mqttClient.on('message', (topic, message, packet) => {
         console.log('CMD 0x00');
         const ts = uint8arr2int(packetInfo.data.slice(1));
         const diffNow = ts - Math.floor(new Date().getTime() / 1000);
-        setTimeout(() => {
+        sendDataTimeout = setTimeout(() => {
           sendDATA(nodeInfo);
         }, diffNow * 1000);
         break;
@@ -185,6 +191,10 @@ mqttClient.on('message', (topic, message, packet) => {
         console.log('CMD 0x03');
         sendDISCONN(nodeInfo);
         process.exit(0);
+      case 0xff:
+        clearTimeout(sendDataTimeout);
+        console.log('Cleared Timer');
+        break;
       default:
     }
   }

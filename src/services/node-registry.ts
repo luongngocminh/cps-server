@@ -6,9 +6,9 @@ import { Server } from 'socket.io';
 import events from '@/socketio/events';
 import _ from 'lodash';
 
-const WINDOWTMS = 5000; // 1 second
-const SESSIONTMS = 5 * 60 * 1000; // 5 min
-const NODETIMEOUT = 60 * 60 * 1000; // 1hour
+const WINDOWTMS = 2000; // 1 second
+const SESSIONTMS = 10 * 1000; // 5 min
+const NODETIMEOUT = 20 * 1000; // 1hour
 
 class ObservableMap<K, T> extends Map {
   setHandler: (v: ObservableMap<K, T>) => void;
@@ -115,7 +115,7 @@ export default class NodeRegistryService {
       }
     }
     this.temporaryNodesRegister.set(key, node);
-    this.nodes.set(key, node);
+    this.nodes.set(key, { ...this.nodes.get(key), ...node });
     if (this.temporaryNodesRegister.size === this.nodes.size) {
       this.endWindow();
       this.endSession();

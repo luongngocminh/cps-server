@@ -44,8 +44,10 @@ export default (app: Router) => {
         const cmd = req.params.cmd;
         switch (cmd) {
           case 'trigger':
-            mqttService.sendTriggerCommand();
+            mqttService.broadcastTriggerCommand();
             break;
+          case 'abort':
+            mqttService.broadcastAbortCommand();
           default:
         }
         return res.json({ success: 1 });
@@ -60,8 +62,8 @@ export default (app: Router) => {
     '/cmd/:ntype/:nid/:cmd',
     celebrate({
       [Segments.PARAMS]: Joi.object({
-        nid: Joi.string().required(),
-        ntype: Joi.string().required(),
+        nid: Joi.number().required(),
+        ntype: Joi.number().required(),
         cmd: Joi.string().required(),
       }),
     }),
@@ -79,7 +81,7 @@ export default (app: Router) => {
         const cmd = req.params.cmd;
         switch (cmd) {
           case 'off':
-            mqttService.sendTriggerCommand();
+            mqttService.broadcastTriggerCommand();
             break;
           default:
         }

@@ -13,7 +13,7 @@ const mqttClient = mqtt.connect(config.mqttURL, {
   password: 'password',
 });
 
-const INTERVAL_MS = 20_000;
+const INTERVAL_MS = 5_000;
 
 const nodeInfo = {
   nid: NODEID,
@@ -126,8 +126,8 @@ function sendDATA(node) {
   // von is random int value from -909 to -908
 
   const vna = -589;
-  const voff = getRandomInt(-909, -908);
-  const von = getRandomInt(-909, -908);
+  const voff = getRandomInt(-912, -906);
+  const von = getRandomInt(-912, -906);
   // pack absolute of vna, voff, von into 6 bytes, each value is 2 bytes
   const data = Buffer.alloc(6);
   data.writeInt16LE(von, 0);
@@ -140,7 +140,7 @@ function sendDATA(node) {
   });
 }
 
-mqttClient.on('connect', function (connack) {
+mqttClient.on('connect', function(connack) {
   console.log('MQTT Client connected: %o', connack);
 
   mqttClient.subscribe(TOPICS.SVR_OUT, (err, granted) => {
@@ -152,9 +152,15 @@ mqttClient.on('connect', function (connack) {
       setInterval(() => {
         sendINFO(nodeInfo);
       }, INTERVAL_MS);
+
+      setInterval(() => {
+        sendDATA(nodeInfo);
+      }, 20000);
     }
   });
 });
+
+let sendDataTimeout: NodeJS.Timeout;
 
 mqttClient.on('message', (topic, message, packet) => {
   if (topic !== TOPICS.SVR_OUT) {
@@ -163,12 +169,11 @@ mqttClient.on('message', (topic, message, packet) => {
   // unpack the message, If receive a CMD packet with type 0x00, send a DATA packet after received timestamp in CMD packet
   const bytes = new Uint8Array(message);
   const packetInfo = unpackMessage(bytes);
-  console.log('packetInfo', packetInfo);
 
   if (packetInfo.type === IPacketType.CMD && packetInfo.data[0] === 0x00) {
     const ts = uint8arr2int(packetInfo.data.slice(1));
     const diffNow = ts - Math.floor(new Date().getTime() / 1000);
-    setTimeout(() => {
+    sendDataTimeout = setTimeout(() => {
       sendDATA(nodeInfo);
     }, diffNow * 1000);
   }
@@ -176,5 +181,11 @@ mqttClient.on('message', (topic, message, packet) => {
   if (packetInfo.type === IPacketType.CMD && packetInfo.data[0] === 0x03) {
     sendDISCONN(nodeInfo);
     process.exit(0);
+  }
+
+  // if receive a CMD packet with type 0xff, clear the timeout without sending DATA packet
+  if (packetInfo.type === IPacketType.CMD && packetInfo.data[0] === 0xff) {
+    clearTimeout(sendDataTimeout);
+    console.log('Cleared Timer');
   }
 });

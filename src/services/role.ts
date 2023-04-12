@@ -3,7 +3,7 @@ import { Inject, Service } from 'typedi';
 
 Service();
 export default class RoleService {
-  constructor(@Inject('roleModel') private roleModel: Models.RoleModel, @Inject('logger') private logger) { }
+  constructor(@Inject('roleModel') private roleModel: Models.RoleModel, @Inject('logger') private logger) {}
 
   getAllRoles() {
     return this.roleModel.find({}).lean();

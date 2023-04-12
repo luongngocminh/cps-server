@@ -38,7 +38,8 @@ export default (app: Router) => {
       body: Joi.object({
         name: Joi.string().required(),
         email: Joi.string().required(),
-      }),
+        role: Joi.string().required(),
+      }).unknown(true),
     }),
     (req: Request, res: Response, next: NextFunction) => {
       const logger: Logger = Container.get('logger');
